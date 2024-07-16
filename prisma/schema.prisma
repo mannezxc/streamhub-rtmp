@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Stream {
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  isLive     Boolean   @default(false)
+  userId     String    @unique @db.ObjectId()
+  startedAt  Int?
+  user       User      @relation(references: [id], fields: [userId])
+  created_at DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+  messages   Message[]
+}
+
+model User {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  login             String    @unique
+  display_name      String?   @unique
+  description       String?
+  profile_image_url String?
+  offline_image_url String?
+  email             String?
+  stream_key        String    @unique @default(uuid())
+  token             String    @unique
+  color             String    @default("#000")
+  created_at        DateTime? @default(now())
+  updatedAt         DateTime? @updatedAt
+  stream            Stream?
+  message           Message[]
+}
+
+model Message {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  text      String
+  createdAt DateTime @default(now())
+  stream    Stream   @relation(fields: [streamId], references: [id])
+  streamId  String   @db.ObjectId()
+  user      User     @relation(references: [id], fields: [userId])
+  userId    String   @db.ObjectId()
+}
