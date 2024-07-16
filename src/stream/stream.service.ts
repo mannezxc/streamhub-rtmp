@@ -37,7 +37,7 @@ export class StreamService implements OnModuleInit {
                 where: {login: username},
                 select: {stream_key: true}
             })
-            const target = `${req.protocol}://${process.env.STREAM_API}/live/${user_stream_key}${quality == '1080' ? '' : '_720'}${this.formats[format] || `/${format}`}`
+            const target = `${req.protocol}://${process.env.STREAM_IP}/live/${user_stream_key}${quality == '1080' ? '' : '_720'}${this.formats[format] || `/${format}`}`
             console.log(format, target, quality)
 
             return this.proxy.web(req, res, {target})
