@@ -4,6 +4,6 @@ import {PrismaService} from "./prisma.service";
 import { SocketsModule } from './sockets/sockets.module';
 
 @Module({
-  imports: [StreamModule, SocketsModule]
+  imports: [StreamModule, SocketsModule, ConfigModule.forRoot()]
 })
 export class AppModule {}
