@@ -58,6 +58,7 @@ export class StreamService implements OnModuleInit {
     }
 
     onModuleInit(): void {
+        console.log(process.env.STREAM_IP)
         this.mediaServer = new NodeMediaServer(this.config);
 
         // before start of stream
