@@ -1,4 +1,5 @@
 import {ConfigOptions} from "./stream.types";
+import {cert, createCertificate} from "../main";
 
 const platform = process.platform
 
@@ -11,10 +12,15 @@ export const streamConfig: ConfigOptions = {
         ping_timeout: 60
     },
     http: {
-        port: 8888,
+        port: 8887,
         mediaroot: "./server",
         allow_origin: "*"
     },
+    // https: {
+    //   cert: cert.cert,
+    //   key: cert.key,
+    //   port: 8888
+    // },
     trans: {
         ffmpeg: platform == 'win32' ? './ffmpeg.exe' : platform == 'darwin' ? './ffmpeg' : require('ffmpeg-static'),
         tasks: [
