@@ -5,7 +5,7 @@ const platform = process.platform;
 
 export const streamConfig: ConfigOptions = {
   rtmp: {
-    port: 1935,
+    port: 193,
     chunk_size: 500,
     gop_cache: true,
     ping: 30,
