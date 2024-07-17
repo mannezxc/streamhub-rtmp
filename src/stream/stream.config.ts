@@ -12,7 +12,7 @@ export const streamConfig: ConfigOptions = {
     ping_timeout: 60,
   },
   http: {
-    port: 8888,
+    port: 80,
     mediaroot: './server',
     allow_origin: '*',
   },
