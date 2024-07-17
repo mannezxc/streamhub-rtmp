@@ -70,7 +70,7 @@ export class StreamService implements OnModuleInit {
     // stream has started
     this.setStreamEvent(
       ConfigEvents.postPublish,
-      async (id: string, StreamPath: string, args: any[]) => {
+      async (id: string, StreamPath: string) => {
         const stream_key =
           this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
 
@@ -99,29 +99,26 @@ export class StreamService implements OnModuleInit {
     );
 
     // stream has ended
-    this.setStreamEvent(
-      ConfigEvents.donePublish,
-      async (id, StreamPath, args) => {
-        const stream_key =
-          this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
-        let candidateStream = await this.prismaService.stream.findFirst({
-          where: {
-            isLive: true,
-            user: { stream_key },
+    this.setStreamEvent(ConfigEvents.donePublish, async (id, StreamPath) => {
+      const stream_key =
+        this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
+      let candidateStream = await this.prismaService.stream.findFirst({
+        where: {
+          isLive: true,
+          user: { stream_key },
+        },
+      });
+      if (candidateStream)
+        candidateStream = await this.prismaService.stream.update({
+          where: { userId: candidateStream.userId },
+          data: {
+            isLive: false,
+            startedAt: null,
           },
         });
-        if (candidateStream)
-          candidateStream = await this.prismaService.stream.update({
-            where: { userId: candidateStream.userId },
-            data: {
-              isLive: false,
-              startedAt: null,
-            },
-          });
-        candidateStream !== null && console.log('Stream updated in database');
-        console.log('[NodeEvent on donePublish] Stream has ended');
-      },
-    );
+      candidateStream !== null && console.log('Stream updated in database');
+      console.log('[NodeEvent on donePublish] Stream has ended');
+    });
 
     this.mediaServer.run();
   }

@@ -1,4 +1,9 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 
 @Controller('stream')
-export class StreamController {}
+export class StreamController {
+  @Get('')
+  helloWorld() {
+    return 'Hello World!';
+  }
+}
