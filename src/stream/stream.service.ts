@@ -116,8 +116,12 @@ export class StreamService implements OnModuleInit {
             this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
           }, 2 * 60 * 1000),
         });
-        const { data } = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-started`, {startedAt: new Date().getTime()});
-        console.log(data);
+        try {
+          const { data } = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-started`, { startedAt: new Date().getTime() });
+          console.log(data);
+        } catch (error) {
+          console.log(error, 'started');
+        }
         console.log(`[NodeEvent on postPublish] Stream has started`);
       },
     );
