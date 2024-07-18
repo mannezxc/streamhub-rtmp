@@ -8,6 +8,6 @@ async function bootstrap() {
     credentials: true,
     origin: process.env.FRONTEND_URL,
   });
-  await app.listen(443);
+  await app.listen(1337);
 }
 bootstrap();

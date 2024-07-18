@@ -5,14 +5,14 @@ const platform = process.platform;
 
 export const streamConfig: ConfigOptions = {
   rtmp: {
-    port: 193,
+    port: 1935,
     chunk_size: 500,
     gop_cache: true,
     ping: 30,
     ping_timeout: 60,
   },
   http: {
-    port: 80,
+    port: 8888,
     mediaroot: './server',
     allow_origin: '*',
   },
