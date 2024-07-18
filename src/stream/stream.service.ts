@@ -117,6 +117,7 @@ export class StreamService implements OnModuleInit {
           }, 2 * 60 * 1000),
         });
         try {
+          console.log(axios.post, process.env.MAIN_BACKEND_URL);
           const { data } = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-started`, { startedAt: new Date().getTime() });
           console.log(data);
         } catch (error) {
