@@ -1,5 +1,10 @@
 import * as NodeMediaServer from 'node-media-server';
 
+export type StreamInterval = {
+  streamId: string
+  interval: NodeJS.Timeout
+}
+
 export enum ConfigEvents {
   preConnect = 'preConnect',
   postConnect = 'postConnect',

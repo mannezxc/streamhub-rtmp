@@ -5,4 +5,5 @@ import { ConfigModule } from '@nestjs/config';
 @Module({
   imports: [StreamModule, ConfigModule.forRoot()],
 })
-export class AppModule {}
+export class AppModule {
+}

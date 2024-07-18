@@ -17,18 +17,12 @@ export const streamConfig: ConfigOptions = {
     allow_origin: '*',
   },
   trans: {
-    ffmpeg:
-      platform == 'win32'
-        ? './ffmpeg.exe'
-        : platform == 'darwin'
-          ? './ffmpeg'
-          : require('ffmpeg-static'),
+    ffmpeg: platform == 'win32' ? './ffmpeg.exe' : require('ffmpeg-static'),
     tasks: [
       {
         app: 'live',
         hls: true,
-        hlsFlags:
-          '[hls_time=1:hls_list_size=2:hls_flags=delete_segments+append_list]',
+        hlsFlags: '[hls_time=1:hls_list_size=2:hls_flags=delete_segments+append_list]',
       },
     ],
   },

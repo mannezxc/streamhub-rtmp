@@ -1,15 +1,17 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ConfigEvents, ConfigOptions, MediaServer } from './stream.types';
+import { ConfigEvents, ConfigOptions, MediaServer, StreamInterval } from './stream.types';
 import * as NodeMediaServer from 'node-media-server';
 import { PrismaService } from '../prisma.service';
 import { streamConfig } from './stream.config';
 import * as deasync from 'deasync';
 import * as process from 'node:process';
+import * as fluent from 'fluent-ffmpeg';
 
 @Injectable()
 export class StreamService implements OnModuleInit {
   private readonly config: ConfigOptions;
   private mediaServer: MediaServer;
+  private streamIntervals: StreamInterval[] = [];
 
   constructor(private readonly prismaService: PrismaService) {
     this.config = streamConfig;
@@ -24,24 +26,27 @@ export class StreamService implements OnModuleInit {
     this.mediaServer.on(event, callback);
   }
 
+  private createScreenshot(streamUrl: string, userLogin: string) {
+    return fluent(streamUrl)
+      .outputOptions(['-f image2', '-vframes 1', '-vcodec png', '-f rawvideo', '-s 1280x720', '-ss 00:00:01'])
+      .output(`./public/${userLogin}-thumbnail.png`)
+      .run()
+      .on('end', () => console.log('Thumbnail created successfully!'))
+      .on('error', (err) => console.error('Error creating thumbnail:', err));
+  }
+
   onModuleInit(): void {
     console.log(process.env.STREAM_IP);
     this.mediaServer = new NodeMediaServer(this.config);
 
     // before start of stream
-    this.setStreamEvent(
-      ConfigEvents.prePublish,
-      async (id, StreamPath, args) => {
-        const stream_key =
-          this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
+    this.setStreamEvent(ConfigEvents.prePublish, async (id, StreamPath, args) => {
+        const stream_key = this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
 
         function getDataSync(prismaService: PrismaService) {
-          let done: boolean = false,
-            result: { stream_key: string } | null,
-            error: any;
+          let done: boolean = false, result: { stream_key: string } | null, error: any;
 
-          prismaService.user
-            .findFirst({
+          prismaService.user.findFirst({
               where: { stream_key },
               select: { stream_key: true },
             })
@@ -60,64 +65,80 @@ export class StreamService implements OnModuleInit {
           const session = this.mediaServer.getSession(id);
           return session.reject();
         }
-        console.log(
-          '[MediaServer on prePublish]',
-          `id=${id} STREAM_KEY=${stream.stream_key} streamPath=${StreamPath} args=${JSON.stringify(args)}`,
-        );
+        console.log('[MediaServer on prePublish]', `id=${id} STREAM_KEY=${stream.stream_key} streamPath=${StreamPath} args=${JSON.stringify(args)}`,);
       },
     );
 
     // stream has started
-    this.setStreamEvent(
-      ConfigEvents.postPublish,
-      async (id: string, StreamPath: string) => {
-        const stream_key =
-          this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
+    this.setStreamEvent(ConfigEvents.postPublish, async (id: string, StreamPath: string) => {
+        const stream_key = this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
 
         let candidateStream = await this.prismaService.stream.findFirst({
           where: {
             isLive: false,
             user: { stream_key },
           },
+          select: {
+            user: {
+              select: {
+                login: true,
+                id: true,
+              },
+            },
+          },
         });
         console.log(candidateStream, 'postPublish');
-        if (candidateStream)
-          candidateStream = await this.prismaService.stream.update({
-            where: {
-              isLive: false,
-              userId: candidateStream.userId,
+        if (candidateStream) candidateStream = await this.prismaService.stream.update({
+          where: {
+            isLive: false,
+            userId: candidateStream.user.id,
+          },
+          data: {
+            isLive: true,
+            startedAt: Date.now(),
+          },
+          select: {
+            user: {
+              select: {
+                login: true,
+                id: true,
+              },
             },
-            data: {
-              isLive: true,
-              startedAt: Date.now(),
-            },
-          });
+          },
+        });
 
         candidateStream !== null && console.log('Stream updated in database');
+        this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
+        this.streamIntervals.push({
+          streamId: id,
+          interval: setInterval(() => {
+            this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
+          }, 2 * 60 * 1000),
+        });
         console.log(`[NodeEvent on postPublish] Stream has started`);
       },
     );
 
     // stream has ended
     this.setStreamEvent(ConfigEvents.donePublish, async (id, StreamPath) => {
-      const stream_key =
-        this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
+      const stream_key = this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
       let candidateStream = await this.prismaService.stream.findFirst({
         where: {
           isLive: true,
           user: { stream_key },
         },
       });
-      if (candidateStream)
-        candidateStream = await this.prismaService.stream.update({
-          where: { userId: candidateStream.userId },
-          data: {
-            isLive: false,
-            startedAt: null,
-          },
-        });
+      if (candidateStream) candidateStream = await this.prismaService.stream.update({
+        where: { userId: candidateStream.userId },
+        data: {
+          isLive: false,
+          startedAt: null,
+        },
+      });
+      const interval = this.streamIntervals.find((stream) => stream.streamId == id);
+      if (interval) clearInterval(interval.interval);
       candidateStream !== null && console.log('Stream updated in database');
-      console.log('[NodeEvent on donePublish] Stream has ended');
+      console.log(`[NodeEvent on donePublish] ${id} Stream has ended`);
     });
 
     this.mediaServer.run();
