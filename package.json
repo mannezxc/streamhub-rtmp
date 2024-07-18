@@ -27,6 +27,7 @@
     "@nestjs/platform-socket.io": "^10.3.10",
     "@nestjs/websockets": "^10.3.10",
     "@prisma/client": "^5.16.2",
+    "axios": "^1.7.2",
     "chalk": "4.1.2",
     "deasync": "^0.1.30",
     "ffmpeg-static": "^5.2.0",

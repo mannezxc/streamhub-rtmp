@@ -6,6 +6,7 @@ import { streamConfig } from './stream.config';
 import * as deasync from 'deasync';
 import * as process from 'node:process';
 import * as fluent from 'fluent-ffmpeg';
+import axios from 'axios';
 
 @Injectable()
 export class StreamService implements OnModuleInit {
@@ -47,9 +48,9 @@ export class StreamService implements OnModuleInit {
           let done: boolean = false, result: { stream_key: string } | null, error: any;
 
           prismaService.user.findFirst({
-              where: { stream_key },
-              select: { stream_key: true },
-            })
+            where: { stream_key },
+            select: { stream_key: true },
+          })
             .then((res: typeof result) => (result = res))
             .catch((err: any) => (error = err))
             .finally(() => (done = true));
@@ -65,7 +66,7 @@ export class StreamService implements OnModuleInit {
           const session = this.mediaServer.getSession(id);
           return session.reject();
         }
-        console.log('[MediaServer on prePublish]', `id=${id} STREAM_KEY=${stream.stream_key} streamPath=${StreamPath} args=${JSON.stringify(args)}`,);
+        console.log('[MediaServer on prePublish]', `id=${id} STREAM_KEY=${stream.stream_key} streamPath=${StreamPath} args=${JSON.stringify(args)}`);
       },
     );
 
@@ -115,6 +116,8 @@ export class StreamService implements OnModuleInit {
             this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
           }, 2 * 60 * 1000),
         });
+        const { data } = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-started`, {startedAt: new Date().getTime()});
+        console.log(data);
         console.log(`[NodeEvent on postPublish] Stream has started`);
       },
     );
@@ -138,6 +141,8 @@ export class StreamService implements OnModuleInit {
       const interval = this.streamIntervals.find((stream) => stream.streamId == id);
       if (interval) clearInterval(interval.interval);
       candidateStream !== null && console.log('Stream updated in database');
+      const { data } = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-ended`);
+      console.log(data);
       console.log(`[NodeEvent on donePublish] ${id} Stream has ended`);
     });
 
