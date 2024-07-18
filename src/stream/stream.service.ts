@@ -72,58 +72,60 @@ export class StreamService implements OnModuleInit {
 
     // stream has started
     this.setStreamEvent(ConfigEvents.postPublish, async (id: string, StreamPath: string) => {
-        const stream_key = this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
-
-        let candidateStream = await this.prismaService.stream.findFirst({
-          where: {
-            isLive: false,
-            user: { stream_key },
-          },
-          select: {
-            user: {
-              select: {
-                login: true,
-                id: true,
-              },
-            },
-          },
-        });
-        console.log(candidateStream, 'postPublish');
-        if (candidateStream) candidateStream = await this.prismaService.stream.update({
-          where: {
-            isLive: false,
-            userId: candidateStream.user.id,
-          },
-          data: {
-            isLive: true,
-            startedAt: Date.now(),
-          },
-          select: {
-            user: {
-              select: {
-                login: true,
-                id: true,
-              },
-            },
-          },
-        });
-
-        candidateStream !== null && console.log('Stream updated in database');
-        this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
-        this.streamIntervals.push({
-          streamId: id,
-          interval: setInterval(() => {
-            this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
-          }, 2 * 60 * 1000),
-        });
         try {
+
+          const stream_key = this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
+
+          let candidateStream = await this.prismaService.stream.findFirst({
+            where: {
+              isLive: false,
+              user: { stream_key },
+            },
+            select: {
+              user: {
+                select: {
+                  login: true,
+                  id: true,
+                },
+              },
+            },
+          });
+          console.log(candidateStream, 'postPublish');
+          if (candidateStream) candidateStream = await this.prismaService.stream.update({
+            where: {
+              isLive: false,
+              userId: candidateStream.user.id,
+            },
+            data: {
+              isLive: true,
+              startedAt: Date.now(),
+            },
+            select: {
+              user: {
+                select: {
+                  login: true,
+                  id: true,
+                },
+              },
+            },
+          });
+
+          candidateStream !== null && console.log('Stream updated in database');
+          this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
+          this.streamIntervals.push({
+            streamId: id,
+            interval: setInterval(() => {
+              this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
+            }, 2 * 60 * 1000),
+          });
           console.log(axios.post, process.env.MAIN_BACKEND_URL);
           const { data } = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-started`, { startedAt: new Date().getTime() });
           console.log(data);
+          console.log(`[NodeEvent on postPublish] Stream has started`);
         } catch (error) {
           console.log(error, 'started');
+
         }
-        console.log(`[NodeEvent on postPublish] Stream has started`);
       },
     );
 
