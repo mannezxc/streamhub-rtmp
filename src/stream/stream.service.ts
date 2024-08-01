@@ -1,8 +1,8 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ConfigEvents, ConfigOptions, MediaServer, StreamInterval } from './stream.types';
+import {Injectable, OnModuleInit} from '@nestjs/common';
+import {ConfigEvents, ConfigOptions, MediaServer, StreamInterval} from './stream.types';
 import * as NodeMediaServer from 'node-media-server';
-import { PrismaService } from '../prisma.service';
-import { streamConfig } from './stream.config';
+import {PrismaService} from '../prisma.service';
+import {streamConfig} from './stream.config';
 import * as deasync from 'deasync';
 import * as process from 'node:process';
 import * as fluent from 'fluent-ffmpeg';
@@ -44,12 +44,12 @@ export class StreamService implements OnModuleInit {
     this.setStreamEvent(ConfigEvents.prePublish, async (id, StreamPath, args) => {
         const stream_key = this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
 
-        function getDataSync(prismaService: PrismaService) {
+        const getDataSync = () => {
           let done: boolean = false, result: { stream_key: string } | null, error: any;
 
-          prismaService.user.findFirst({
-            where: { stream_key },
-            select: { stream_key: true },
+          this.prismaService.user.findFirst({
+            where: {stream_key},
+            select: {stream_key: true},
           })
             .then((res: typeof result) => (result = res))
             .catch((err: any) => (error = err))
@@ -60,7 +60,7 @@ export class StreamService implements OnModuleInit {
           return result;
         }
 
-        const stream: { stream_key: string } = getDataSync(this.prismaService);
+        const stream: { stream_key: string } = getDataSync();
 
         if (stream == null) {
           const session = this.mediaServer.getSession(id);
@@ -73,53 +73,42 @@ export class StreamService implements OnModuleInit {
     // stream has started
     this.setStreamEvent(ConfigEvents.postPublish, async (id: string, StreamPath: string) => {
         try {
-
           const stream_key = this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
 
-          let candidateStream = await this.prismaService.stream.findFirst({
+          let candidateStream = await this.prismaService.user.findFirst({
             where: {
-              isLive: false,
-              user: { stream_key },
+              stream_key
             },
             select: {
-              user: {
-                select: {
-                  login: true,
-                  id: true,
-                },
-              },
+              login: true,
+              id: true,
             },
           });
           console.log(candidateStream, 'postPublish');
-          if (candidateStream) candidateStream = await this.prismaService.stream.update({
+          if (candidateStream) candidateStream = await this.prismaService.user.update({
             where: {
-              isLive: false,
-              userId: candidateStream.user.id,
+              id: candidateStream.id,
             },
             data: {
+              streamStartedAt: new Date(),
               isLive: true,
-              startedAt: Date.now(),
             },
             select: {
-              user: {
-                select: {
-                  login: true,
-                  id: true,
-                },
-              },
+              login: true,
+              id: true,
             },
           });
 
           candidateStream !== null && console.log('Stream updated in database');
-          this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
-          this.streamIntervals.push({
-            streamId: id,
-            interval: setInterval(() => {
-              this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.user.login);
-            }, 2 * 60 * 1000),
-          });
-          console.log(axios.post, process.env.MAIN_BACKEND_URL);
-          const { data } = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-started`, { startedAt: new Date().getTime() });
+          // this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.login);
+          // this.streamIntervals.push({
+          //   streamId: id,
+          //   interval: setInterval(() => {
+          //     this.createScreenshot(process.env.STREAM_URL + stream_key, candidateStream.login);
+          //   }, 2 * 60 * 1000),
+          // });
+          // console.log(axios.post, process.env.MAIN_BACKEND_URL);
+          const {data} = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-started`, {streamStartedAt: new Date()});
           console.log(data);
           console.log(`[NodeEvent on postPublish] Stream has started`);
         } catch (error) {
@@ -132,23 +121,22 @@ export class StreamService implements OnModuleInit {
     // stream has ended
     this.setStreamEvent(ConfigEvents.donePublish, async (id, StreamPath) => {
       const stream_key = this.getStreamKeyFromStreamPath(StreamPath).split('_')[0];
-      let candidateStream = await this.prismaService.stream.findFirst({
+      let candidateStream = await this.prismaService.user.findFirst({
         where: {
-          isLive: true,
-          user: { stream_key },
+          stream_key
         },
       });
-      if (candidateStream) candidateStream = await this.prismaService.stream.update({
-        where: { userId: candidateStream.userId },
+      if (candidateStream) candidateStream = await this.prismaService.user.update({
+        where: {id: candidateStream.id},
         data: {
+          streamStartedAt: null,
           isLive: false,
-          startedAt: null,
         },
       });
-      const interval = this.streamIntervals.find((stream) => stream.streamId == id);
-      if (interval) clearInterval(interval.interval);
+      // const interval = this.streamIntervals.find((stream) => stream.streamId == id);
+      // if (interval) clearInterval(interval.interval);
       candidateStream !== null && console.log('Stream updated in database');
-      const { data } = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-ended`);
+      const {data} = await axios.post(`${process.env.MAIN_BACKEND_URL}/stream/has-ended`);
       console.log(data);
       console.log(`[NodeEvent on donePublish] ${id} Stream has ended`);
     });
@@ -156,3 +144,4 @@ export class StreamService implements OnModuleInit {
     this.mediaServer.run();
   }
 }
+

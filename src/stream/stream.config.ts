@@ -7,7 +7,7 @@ export const streamConfig: ConfigOptions = {
   rtmp: {
     port: 1935,
     chunk_size: 500,
-    gop_cache: true,
+    gop_cache: false,
     ping: 30,
     ping_timeout: 60,
   },
