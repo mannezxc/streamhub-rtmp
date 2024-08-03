@@ -1,0 +1,23 @@
+name: NestJS
+description: Nest (NestJS) is a framework for building efficient, scalable Node.js server-side applications. It uses progressive JavaScript, is built with and fully supports TypeScript.
+logo: https://microtica.s3.eu-central-1.amazonaws.com/assets/templates/logos/nestjs.svg
+repo: https://github.com/microtica/templates/tree/master/nestjs
+
+inputs:
+  properties:
+    AppName:
+      type: string
+      description: The name of the application. The name will be shown in the portal.
+      maxLength: 23
+      pattern: ^[a-z]*$
+      patternErrorMessage: "The app name can contain only lowercase letters."
+  required:
+    - AppName
+
+service:
+  "{{AppName}}":
+    source: git
+    containerPort: "{{CONTAINER_PORT}}"
+    autoScaling:
+      minReplicas: 1
+      maxReplicas: 1
